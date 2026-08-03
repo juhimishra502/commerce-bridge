@@ -2,71 +2,217 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Commerce Bridge — one catalog, two agent checkout protocols</title>
+<title>Commerce Bridge — Vendor Portal</title>
 <style>
-  body { font-family: -apple-system, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
-  h1 { font-size: 22px; }
-  p.sub { color: #555; margin-top: -8px; }
-  .products { display: flex; gap: 16px; margin: 24px 0; }
-  .product { border: 1px solid #ddd; border-radius: 8px; padding: 12px; flex: 1; }
-  .product h3 { margin: 0 0 4px; font-size: 15px; }
-  .product .price { color: #444; font-size: 14px; }
-  .lanes { display: flex; gap: 20px; margin-top: 30px; }
-  .lane { flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
-  .lane h2 { font-size: 16px; margin-top: 0; }
-  button { background: #635bff; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-  button:disabled { background: #bbb; cursor: default; }
-  pre { background: #f6f6f8; padding: 12px; border-radius: 6px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; }
-  .status { font-weight: 600; margin-top: 10px; }
-  .ok { color: #0a7a2f; }
-  .err { color: #b00020; }
+  :root {
+    --accent: #635bff;
+    --accent-dark: #4b42e0;
+    --border: #e3e3e8;
+    --bg-soft: #f7f7fa;
+    --text: #1a1a1a;
+    --text-muted: #666;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+    color: var(--text);
+    background: #fff;
+  }
+  header.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .logo {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--accent); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .brand h1 { font-size: 17px; margin: 0; }
+  .brand .tag { font-size: 12px; color: var(--text-muted); }
+  .badge {
+    font-size: 12px; color: var(--text-muted);
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 4px 12px;
+  }
+
+  section { margin-bottom: 36px; }
+  section > h2 { font-size: 15px; margin: 0 0 4px; }
+  section > p.desc { font-size: 13px; color: var(--text-muted); margin: 0 0 16px; }
+
+  .catalog { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .catalog-item {
+    border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .catalog-item .row1 { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .catalog-item h3 { font-size: 14px; margin: 0; }
+  .catalog-item .price { font-size: 13px; color: var(--text-muted); }
+  .catalog-item .desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+  .qty-row { display: flex; align-items: center; gap: 8px; margin-top: auto; }
+  .qty-row label { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+  .qty-row input[type="number"] {
+    width: 52px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;
+  }
+  .qty-row input[type="checkbox"] { width: 15px; height: 15px; }
+
+  .channels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .channel-card {
+    border: 1px solid var(--border); border-radius: 12px; padding: 18px;
+    background: var(--bg-soft);
+  }
+  .channel-card .channel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .channel-card .icon { font-size: 20px; }
+  .channel-card h3 { font-size: 15px; margin: 0; }
+  .channel-card .available {
+    display: inline-block; font-size: 11px; color: #0a7a2f; background: #e6f4ea;
+    padding: 2px 8px; border-radius: 10px; margin-top: 2px;
+  }
+  .channel-card p.spec { font-size: 12.5px; color: var(--text-muted); margin: 8px 0 14px; }
+  button.test-btn {
+    background: var(--accent); color: white; border: none;
+    padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 13.5px;
+    width: 100%;
+  }
+  button.test-btn:hover { background: var(--accent-dark); }
+  button.test-btn:disabled { background: #bbb; cursor: default; }
+
+  .result { margin-top: 14px; }
+  .status-line { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+  .status-line.ok { color: #0a7a2f; }
+  .status-line.err { color: #b00020; }
+  .order-summary {
+    background: white; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12.5px; margin-bottom: 8px;
+  }
+  .order-summary .line { display: flex; justify-content: space-between; padding: 2px 0; }
+  .order-summary .line.total { font-weight: 700; border-top: 1px solid var(--border); margin-top: 4px; padding-top: 6px; }
+  details.raw { font-size: 12px; }
+  details.raw summary { cursor: pointer; color: var(--text-muted); }
+  pre {
+    background: white; border: 1px solid var(--border);
+    padding: 10px; border-radius: 6px; font-size: 11px;
+    overflow-x: auto; white-space: pre-wrap; margin-top: 6px;
+  }
 </style>
 </head>
 <body>
-  <h1>Commerce Bridge</h1>
-  <p class="sub">One product catalog, sold through two competing agentic-checkout standards, settling through the same real Stripe test payment underneath.</p>
 
-  <div class="products" id="products"></div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🏪</div>
+      <div>
+        <h1>Aurora Goods</h1>
+        <div class="tag">Vendor Portal · Commerce Bridge</div>
+      </div>
+    </div>
+    <div class="badge">Sandbox / Test Mode</div>
+  </header>
 
-  <div class="lanes">
-    <div class="lane">
-      <h2>ChatGPT-style agent (ACP)</h2>
-      <p style="font-size:13px;color:#666">Uses Stripe/OpenAI's Agentic Commerce Protocol shape.</p>
-      <button onclick="runFlow('acp')">Simulate agent purchase via ACP</button>
-      <div id="acp-status" class="status"></div>
-      <pre id="acp-result"></pre>
+  <section>
+    <h2>Your Storefront</h2>
+    <p class="desc">Products currently in your catalog. Select which items to include in a test agent checkout below.</p>
+    <div class="catalog" id="catalog"></div>
+  </section>
+
+  <section>
+    <h2>Sales Channels</h2>
+    <p class="desc">Your catalog is connected to the following agent checkout standards. Test a purchase through either one using your selected products.</p>
+    <div class="channels">
+
+      <div class="channel-card">
+        <div class="channel-head">
+          <span class="icon">🤖</span>
+          <h3>ChatGPT Agent Checkout</h3>
+        </div>
+        <span class="available">● Connected</span>
+        <p class="spec">Agentic Commerce Protocol (ACP) — Stripe + OpenAI</p>
+        <button class="test-btn" onclick="runFlow('acp')">Test checkout as ChatGPT agent</button>
+        <div class="result" id="acp-result-wrap"></div>
+      </div>
+
+      <div class="channel-card">
+        <div class="channel-head">
+          <span class="icon">✨</span>
+          <h3>Gemini Agent Checkout</h3>
+        </div>
+        <span class="available">● Connected</span>
+        <p class="spec">Universal Commerce Protocol (UCP) — Google + Shopify</p>
+        <button class="test-btn" onclick="runFlow('ucp')">Test checkout as Gemini agent</button>
+        <div class="result" id="ucp-result-wrap"></div>
+      </div>
+
     </div>
-    <div class="lane">
-      <h2>Gemini-style agent (UCP)</h2>
-      <p style="font-size:13px;color:#666">Uses Google/Shopify's Universal Commerce Protocol shape.</p>
-      <button onclick="runFlow('ucp')">Simulate agent purchase via UCP</button>
-      <div id="ucp-status" class="status"></div>
-      <pre id="ucp-result"></pre>
-    </div>
-  </div>
+  </section>
 
 <script>
+let CATALOG = [];
+
+function selectedItems() {
+  return CATALOG
+    .map(p => {
+      const checked = document.getElementById('chk-' + p.id).checked;
+      const qty = parseInt(document.getElementById('qty-' + p.id).value, 10) || 1;
+      return checked ? { id: p.id, quantity: qty } : null;
+    })
+    .filter(Boolean);
+}
+
 async function loadCatalog() {
   const res = await fetch('/catalog');
-  const products = await res.json();
-  document.getElementById('products').innerHTML = products.map(p => `
-    <div class="product">
-      <h3>${p.title}</h3>
-      <div class="price">$${(p.price / 100).toFixed(2)}</div>
+  CATALOG = await res.json();
+  document.getElementById('catalog').innerHTML = CATALOG.map(p => `
+    <div class="catalog-item">
+      <div class="row1">
+        <h3>${p.title}</h3>
+        <div class="price">$${(p.price / 100).toFixed(2)}</div>
+      </div>
+      <div class="desc">${p.description}</div>
+      <div class="qty-row">
+        <label><input type="checkbox" id="chk-${p.id}" checked> Include</label>
+        <input type="number" id="qty-${p.id}" value="1" min="1" max="10">
+      </div>
     </div>
   `).join('');
-  return products;
+}
+
+function renderResult(wrapId, completed) {
+  const wrap = document.getElementById(wrapId);
+  const modeLabel = completed.order.payment_mode === 'real_stripe_test' ? 'real Stripe test charge' : 'simulated (no Stripe key set)';
+
+  const lines = completed.totals.map(t =>
+    `<div class="line${t.type === 'total' ? ' total' : ''}"><span>${t.display_text}</span><span>$${(t.amount / 100).toFixed(2)}</span></div>`
+  ).join('');
+
+  wrap.innerHTML = `
+    <div class="status-line ok">✔ Purchase complete — ${modeLabel}</div>
+    <div class="order-summary">${lines}</div>
+    <details class="raw">
+      <summary>View raw checkout session response</summary>
+      <pre>${JSON.stringify(completed, null, 2)}</pre>
+    </details>
+  `;
 }
 
 async function runFlow(protocol) {
-  const statusEl = document.getElementById(protocol + '-status');
-  const resultEl = document.getElementById(protocol + '-result');
-  statusEl.textContent = 'Creating checkout session...';
-  statusEl.className = 'status';
-  resultEl.textContent = '';
+  const wrapId = protocol + '-result-wrap';
+  const wrap = document.getElementById(wrapId);
+  const items = selectedItems();
 
-  const products = await loadCatalog();
-  const items = [{ id: products[0].id, quantity: 1 }, { id: products[2].id, quantity: 2 }];
+  if (items.length === 0) {
+    wrap.innerHTML = `<div class="status-line err">✘ Select at least one product first</div>`;
+    return;
+  }
+
+  wrap.innerHTML = `<div class="status-line">Creating checkout session...</div>`;
 
   const createUrl = protocol === 'acp' ? '/acp/checkout_sessions' : '/ucp/checkout-sessions';
   const createBody = protocol === 'acp'
@@ -81,19 +227,15 @@ async function runFlow(protocol) {
     });
     const session = await createRes.json();
 
-    statusEl.textContent = 'Session created (' + session.status + '). Completing payment...';
+    wrap.innerHTML = `<div class="status-line">Session created (${session.status}). Completing payment...</div>`;
 
     const completeUrl = createUrl + '/' + session.id + '/complete';
     const completeRes = await fetch(completeUrl, { method: 'POST' });
     const completed = await completeRes.json();
 
-    const modeLabel = completed.order.payment_mode === 'real_stripe_test' ? 'real Stripe test charge' : 'simulated (no Stripe key set)';
-    statusEl.textContent = '✔ Purchase complete — ' + modeLabel + ' — status: ' + completed.order.stripe_status;
-    statusEl.className = 'status ok';
-    resultEl.textContent = JSON.stringify(completed, null, 2);
+    renderResult(wrapId, completed);
   } catch (e) {
-    statusEl.textContent = '✘ Failed — see console / check STRIPE_SECRET_KEY is set';
-    statusEl.className = 'status err';
+    wrap.innerHTML = `<div class="status-line err">✘ Failed — check console</div>`;
     console.error(e);
   }
 }
