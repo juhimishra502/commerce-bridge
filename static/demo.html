@@ -57,12 +57,16 @@
   .catalog-item h3 { font-size: 14px; margin: 0; }
   .catalog-item .price { font-size: 13px; color: var(--text-muted); }
   .catalog-item .desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
-  .qty-row { display: flex; align-items: center; gap: 8px; margin-top: auto; }
-  .qty-row label { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+  .qty-row { display: flex; align-items: center; gap: 8px; }
+  .qty-row label { font-size: 12px; color: var(--text-muted); }
   .qty-row input[type="number"] {
     width: 52px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;
   }
-  .qty-row input[type="checkbox"] { width: 15px; height: 15px; }
+  .channel-toggles { display: flex; gap: 14px; margin-top: auto; padding-top: 6px; border-top: 1px solid var(--border); }
+  .channel-toggles label {
+    font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; cursor: pointer;
+  }
+  .channel-toggles input[type="checkbox"] { width: 14px; height: 14px; }
 
   .channels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .channel-card {
@@ -119,13 +123,13 @@
 
   <section>
     <h2>Your Storefront</h2>
-    <p class="desc">Products currently in your catalog. Select which items to include in a test agent checkout below.</p>
+    <p class="desc">Products currently in your catalog. Choose which channel(s) each product is sold through — a product can be sold via ChatGPT, Gemini, both, or neither.</p>
     <div class="catalog" id="catalog"></div>
   </section>
 
   <section>
     <h2>Sales Channels</h2>
-    <p class="desc">Your catalog is connected to the following agent checkout standards. Test a purchase through either one using your selected products.</p>
+    <p class="desc">Your catalog is connected to the following agent checkout standards. Testing a channel uses whichever products above are enabled for it.</p>
     <div class="channels">
 
       <div class="channel-card">
@@ -156,10 +160,10 @@
 <script>
 let CATALOG = [];
 
-function selectedItems() {
+function selectedItems(protocol) {
   return CATALOG
     .map(p => {
-      const checked = document.getElementById('chk-' + p.id).checked;
+      const checked = document.getElementById('chk-' + protocol + '-' + p.id).checked;
       const qty = parseInt(document.getElementById('qty-' + p.id).value, 10) || 1;
       return checked ? { id: p.id, quantity: qty } : null;
     })
@@ -177,8 +181,12 @@ async function loadCatalog() {
       </div>
       <div class="desc">${p.description}</div>
       <div class="qty-row">
-        <label><input type="checkbox" id="chk-${p.id}" checked> Include</label>
+        <label>Qty</label>
         <input type="number" id="qty-${p.id}" value="1" min="1" max="10">
+      </div>
+      <div class="channel-toggles">
+        <label><input type="checkbox" id="chk-acp-${p.id}" checked> 🤖 ChatGPT</label>
+        <label><input type="checkbox" id="chk-ucp-${p.id}" checked> ✨ Gemini</label>
       </div>
     </div>
   `).join('');
@@ -186,7 +194,7 @@ async function loadCatalog() {
 
 function renderResult(wrapId, completed) {
   const wrap = document.getElementById(wrapId);
-  const modeLabel = completed.order.payment_mode === 'real_stripe_test' ? 'real Stripe test charge' : 'simulated (no Stripe key set)';
+  const modeLabel = completed.order.payment_mode === 'real_stripe_test' ? 'real Stripe test charge' : 'simulated transaction';
 
   const lines = completed.totals.map(t =>
     `<div class="line${t.type === 'total' ? ' total' : ''}"><span>${t.display_text}</span><span>$${(t.amount / 100).toFixed(2)}</span></div>`
@@ -205,10 +213,10 @@ function renderResult(wrapId, completed) {
 async function runFlow(protocol) {
   const wrapId = protocol + '-result-wrap';
   const wrap = document.getElementById(wrapId);
-  const items = selectedItems();
+  const items = selectedItems(protocol);
 
   if (items.length === 0) {
-    wrap.innerHTML = `<div class="status-line err">✘ Select at least one product first</div>`;
+    wrap.innerHTML = `<div class="status-line err">✘ No products enabled for this channel</div>`;
     return;
   }
 
