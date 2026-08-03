@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Commerce Bridge — one catalog, two agent checkout protocols</title>
+<style>
+  body { font-family: -apple-system, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 22px; }
+  p.sub { color: #555; margin-top: -8px; }
+  .products { display: flex; gap: 16px; margin: 24px 0; }
+  .product { border: 1px solid #ddd; border-radius: 8px; padding: 12px; flex: 1; }
+  .product h3 { margin: 0 0 4px; font-size: 15px; }
+  .product .price { color: #444; font-size: 14px; }
+  .lanes { display: flex; gap: 20px; margin-top: 30px; }
+  .lane { flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+  .lane h2 { font-size: 16px; margin-top: 0; }
+  button { background: #635bff; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  button:disabled { background: #bbb; cursor: default; }
+  pre { background: #f6f6f8; padding: 12px; border-radius: 6px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; }
+  .status { font-weight: 600; margin-top: 10px; }
+  .ok { color: #0a7a2f; }
+  .err { color: #b00020; }
+</style>
+</head>
+<body>
+  <h1>Commerce Bridge</h1>
+  <p class="sub">One product catalog, sold through two competing agentic-checkout standards, settling through the same real Stripe test payment underneath.</p>
+
+  <div class="products" id="products"></div>
+
+  <div class="lanes">
+    <div class="lane">
+      <h2>ChatGPT-style agent (ACP)</h2>
+      <p style="font-size:13px;color:#666">Uses Stripe/OpenAI's Agentic Commerce Protocol shape.</p>
+      <button onclick="runFlow('acp')">Simulate agent purchase via ACP</button>
+      <div id="acp-status" class="status"></div>
+      <pre id="acp-result"></pre>
+    </div>
+    <div class="lane">
+      <h2>Gemini-style agent (UCP)</h2>
+      <p style="font-size:13px;color:#666">Uses Google/Shopify's Universal Commerce Protocol shape.</p>
+      <button onclick="runFlow('ucp')">Simulate agent purchase via UCP</button>
+      <div id="ucp-status" class="status"></div>
+      <pre id="ucp-result"></pre>
+    </div>
+  </div>
+
+<script>
+async function loadCatalog() {
+  const res = await fetch('/catalog');
+  const products = await res.json();
+  document.getElementById('products').innerHTML = products.map(p => `
+    <div class="product">
+      <h3>${p.title}</h3>
+      <div class="price">$${(p.price / 100).toFixed(2)}</div>
+    </div>
+  `).join('');
+  return products;
+}
+
+async function runFlow(protocol) {
+  const statusEl = document.getElementById(protocol + '-status');
+  const resultEl = document.getElementById(protocol + '-result');
+  statusEl.textContent = 'Creating checkout session...';
+  statusEl.className = 'status';
+  resultEl.textContent = '';
+
+  const products = await loadCatalog();
+  const items = [{ id: products[0].id, quantity: 1 }, { id: products[2].id, quantity: 2 }];
+
+  const createUrl = protocol === 'acp' ? '/acp/checkout_sessions' : '/ucp/checkout-sessions';
+  const createBody = protocol === 'acp'
+    ? { buyer: { name: 'Test Buyer', email: 'buyer@example.com' }, items }
+    : { items };
+
+  try {
+    const createRes = await fetch(createUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(createBody)
+    });
+    const session = await createRes.json();
+
+    statusEl.textContent = 'Session created (' + session.status + '). Completing payment...';
+
+    const completeUrl = createUrl + '/' + session.id + '/complete';
+    const completeRes = await fetch(completeUrl, { method: 'POST' });
+    const completed = await completeRes.json();
+
+    const modeLabel = completed.order.payment_mode === 'real_stripe_test' ? 'real Stripe test charge' : 'simulated (no Stripe key set)';
+    statusEl.textContent = '✔ Purchase complete — ' + modeLabel + ' — status: ' + completed.order.stripe_status;
+    statusEl.className = 'status ok';
+    resultEl.textContent = JSON.stringify(completed, null, 2);
+  } catch (e) {
+    statusEl.textContent = '✘ Failed — see console / check STRIPE_SECRET_KEY is set';
+    statusEl.className = 'status err';
+    console.error(e);
+  }
+}
+
+loadCatalog();
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "prod_earbuds",
+    "title": "Wireless Earbuds",
+    "description": "Noise-cancelling wireless earbuds with 24h battery.",
+    "price": 4999,
+    "currency": "usd"
+  },
+  {
+    "id": "prod_keyboard",
+    "title": "Mechanical Keyboard",
+    "description": "Compact 75% mechanical keyboard, hot-swappable switches.",
+    "price": 8900,
+    "currency": "usd"
+  },
+  {
+    "id": "prod_lamp",
+    "title": "Desk Lamp",
+    "description": "Dimmable LED desk lamp with USB-C charging port.",
+    "price": 2500,
+    "currency": "usd"
+  }
+]
