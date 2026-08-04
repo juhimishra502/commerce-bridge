@@ -139,6 +139,21 @@ def init_db():
             created_at TEXT NOT NULL,
             decided_at TEXT
         );
+        CREATE TABLE IF NOT EXISTS demo_orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_name TEXT NOT NULL,
+            customer_email TEXT,
+            store_id INTEGER NOT NULL REFERENCES stores(id),
+            product_id INTEGER NOT NULL REFERENCES products(id),
+            stage TEXT NOT NULL,
+            payment_method TEXT,
+            billing_name TEXT,
+            billing_address TEXT,
+            payment_intent_id TEXT,
+            payment_mode TEXT,
+            shipping_estimate TEXT,
+            created_at TEXT NOT NULL
+        );
         """
     )
     conn.commit()
@@ -695,6 +710,147 @@ def ucp_complete_session(session_id):
     sess["order"] = {"id": public_id, "checkout_session_id": session_id}
     del SESSIONS[session_id]
     return jsonify({k: v for k, v in sess.items() if not k.startswith("_")})
+
+
+# ---------------------------------------------------------------------------
+# Customer purchase flow demo — a human-facing walkthrough (request → payment
+# method → checkout → invoice), separate from the vendor dashboard above.
+# No login: this is a scripted demo of the buyer's side of a purchase, using
+# real product/store data already in the system. Not a real customer account
+# system — see README for why.
+# ---------------------------------------------------------------------------
+
+SHIPPING_ESTIMATES = ["3-5 business days", "5-7 business days", "7-10 business days"]
+
+
+def _demo_order_or_404(demo_order_id):
+    return get_db().execute(
+        "SELECT * FROM demo_orders WHERE id = ?", (demo_order_id,)
+    ).fetchone()
+
+
+@app.route("/customer-demo")
+def customer_demo_list():
+    db = get_db()
+    products = db.execute(
+        "SELECT products.*, stores.store_name FROM products "
+        "JOIN stores ON stores.id = products.store_id "
+        "ORDER BY products.id"
+    ).fetchall()
+    demo_orders = db.execute(
+        "SELECT demo_orders.*, products.title AS product_title, stores.store_name FROM demo_orders "
+        "JOIN products ON products.id = demo_orders.product_id "
+        "JOIN stores ON stores.id = demo_orders.store_id "
+        "ORDER BY demo_orders.id DESC"
+    ).fetchall()
+    return render_template("customer_demo_list.html", products=products, demo_orders=demo_orders)
+
+
+@app.route("/customer-demo/start", methods=["POST"])
+def customer_demo_start():
+    customer_name = request.form.get("customer_name", "").strip()
+    customer_email = request.form.get("customer_email", "").strip()
+    product_id = request.form.get("product_id", type=int)
+
+    db = get_db()
+    product = db.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
+    if not customer_name or not product:
+        return redirect(url_for("customer_demo_list"))
+
+    cur = db.execute(
+        "INSERT INTO demo_orders (customer_name, customer_email, store_id, product_id, stage, created_at) "
+        "VALUES (?, ?, ?, ?, 'requested', ?)",
+        (customer_name, customer_email, product["store_id"], product["id"], now_iso()),
+    )
+    db.commit()
+    return redirect(url_for("customer_demo_request", demo_order_id=cur.lastrowid))
+
+
+@app.route("/customer-demo/<int:demo_order_id>/request")
+def customer_demo_request(demo_order_id):
+    db = get_db()
+    demo_order = _demo_order_or_404(demo_order_id)
+    product = db.execute(
+        "SELECT products.*, stores.store_name FROM products JOIN stores ON stores.id = products.store_id "
+        "WHERE products.id = ?",
+        (demo_order["product_id"],),
+    ).fetchone()
+    return render_template("customer_demo_request.html", demo_order=demo_order, product=product)
+
+
+@app.route("/customer-demo/<int:demo_order_id>/payment", methods=["GET", "POST"])
+def customer_demo_payment(demo_order_id):
+    db = get_db()
+    demo_order = _demo_order_or_404(demo_order_id)
+    product = db.execute(
+        "SELECT products.*, stores.store_name FROM products JOIN stores ON stores.id = products.store_id "
+        "WHERE products.id = ?",
+        (demo_order["product_id"],),
+    ).fetchone()
+
+    if request.method == "GET":
+        return render_template("customer_demo_payment.html", demo_order=demo_order, product=product)
+
+    db.execute(
+        "UPDATE demo_orders SET payment_method = 'card', stage = 'checkout' WHERE id = ?",
+        (demo_order_id,),
+    )
+    db.commit()
+    return redirect(url_for("customer_demo_checkout", demo_order_id=demo_order_id))
+
+
+@app.route("/customer-demo/<int:demo_order_id>/checkout", methods=["GET", "POST"])
+def customer_demo_checkout(demo_order_id):
+    db = get_db()
+    demo_order = _demo_order_or_404(demo_order_id)
+    product = db.execute(
+        "SELECT products.*, stores.store_name FROM products JOIN stores ON stores.id = products.store_id "
+        "WHERE products.id = ?",
+        (demo_order["product_id"],),
+    ).fetchone()
+
+    if request.method == "GET":
+        return render_template("customer_demo_checkout.html", demo_order=demo_order, product=product)
+
+    billing_name = request.form.get("billing_name", "").strip()
+    billing_address = request.form.get("billing_address", "").strip()
+
+    tax = round(product["price_cents"] * TAX_RATE)
+    total = product["price_cents"] + tax
+    intent = _charge_with_test_card(total, f"Customer demo order {demo_order_id}")
+    shipping_estimate = SHIPPING_ESTIMATES[demo_order_id % len(SHIPPING_ESTIMATES)]
+
+    db.execute(
+        "UPDATE demo_orders SET billing_name = ?, billing_address = ?, payment_intent_id = ?, "
+        "payment_mode = ?, shipping_estimate = ?, stage = 'invoiced' WHERE id = ?",
+        (
+            billing_name,
+            billing_address,
+            intent.id,
+            "real_stripe_test" if stripe.api_key else "simulated",
+            shipping_estimate,
+            demo_order_id,
+        ),
+    )
+    db.commit()
+    return redirect(url_for("customer_demo_invoice", demo_order_id=demo_order_id))
+
+
+@app.route("/customer-demo/<int:demo_order_id>/invoice")
+def customer_demo_invoice(demo_order_id):
+    db = get_db()
+    demo_order = _demo_order_or_404(demo_order_id)
+    product = db.execute(
+        "SELECT products.*, stores.store_name FROM products JOIN stores ON stores.id = products.store_id "
+        "WHERE products.id = ?",
+        (demo_order["product_id"],),
+    ).fetchone()
+
+    tax = round(product["price_cents"] * TAX_RATE)
+    total = product["price_cents"] + tax
+    return render_template(
+        "customer_demo_invoice.html", demo_order=demo_order, product=product, tax=tax, total=total
+    )
 
 
 if __name__ == "__main__":

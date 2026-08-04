@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Purchase Request — Commerce Bridge{% endblock %}
+{% block store_name %}Purchase Request{% endblock %}
+{% block subtitle %}Step 1 of 4 · {{ demo_order['customer_name'] }}{% endblock %}
+{% block nav %}
+  <nav><a href="{{ url_for('customer_demo_list') }}">← All simulated customers</a></nav>
+{% endblock %}
+{% block content %}
+
+<section>
+  <div class="card" style="max-width:480px;">
+    <div class="row1" style="align-items:flex-start;">
+      <div>
+        <h3 style="font-size:16px;margin:0 0 4px;">{{ product['title'] }}</h3>
+        <div style="font-size:13px;color:var(--text-muted);">{{ product['store_name'] }}</div>
+      </div>
+      <div class="price" style="font-size:18px;font-weight:600;color:var(--text);">${{ "%.2f"|format(product['price_cents']/100) }}</div>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin:12px 0 0;">{{ product['description'] }}</p>
+
+    <div style="margin-top:18px;padding:14px;border-radius:8px;background:{{ 'var(--bg-soft)' if product['available'] else '#fff4e0' }};">
+      {% if product['available'] %}
+        <strong style="font-size:13px;color:#0a7a2f;">✓ In stock</strong>
+        <p style="font-size:13px;color:var(--text-muted);margin:6px 0 0;">Request submitted for processing — proceed to payment to complete your purchase.</p>
+      {% else %}
+        <strong style="font-size:13px;color:#8a5a00;">Not currently available at {{ product['store_name'] }}</strong>
+        <p style="font-size:13px;color:var(--text-muted);margin:6px 0 0;">Your request has been submitted — we'll process your order and notify you as soon as it's fulfilled. You can still continue to set up payment now.</p>
+      {% endif %}
+    </div>
+
+    <div style="margin-top:20px;">
+      <a class="btn" style="display:inline-block;text-decoration:none;" href="{{ url_for('customer_demo_payment', demo_order_id=demo_order['id']) }}">Continue to payment</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

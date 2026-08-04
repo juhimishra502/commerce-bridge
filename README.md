@@ -71,6 +71,11 @@ Now approving an order creates a real `PaymentIntent` visible in the [Stripe tes
 | `POST /acp/checkout_sessions[/<id>/complete]` | ACP-shaped checkout for the active store |
 | `POST /ucp/checkout-sessions[/<id>/complete]` | UCP-shaped checkout for the active store |
 | `/dashboard/orders/<id>/approve\|reject\|shipment` | Order decisions (approval triggers the charge) |
+| `/customer-demo` | Buyer-side walkthrough (see below) — no login required |
+
+## Customer purchase flow demo
+
+Everything above is the vendor's view — the plumbing. `/customer-demo` is the buyer's view: a scripted 4-screen walkthrough (Purchase Request → Payment Method → Stripe-style Checkout → Invoice) built on real products already added by vendors, not disconnected sample data. It's not a real customer account system (no signup/login) — just a human-readable narrative of what a purchase feels like from the other side, and it supports multiple simulated customers in flight at once, each at their own stage. The checkout step runs through the same `_charge_with_test_card` logic as the vendor side, so it's a real (or simulated) Stripe test-mode charge underneath, not just a visual mockup.
 
 ## Why I built this
 

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Customer Purchase Demo — Commerce Bridge{% endblock %}
+{% block store_name %}Customer Purchase Demo{% endblock %}
+{% block subtitle %}A walkthrough of the buyer's side of a purchase{% endblock %}
+{% block nav %}
+  <nav><a href="{{ url_for('login') }}">Vendor login</a></nav>
+{% endblock %}
+{% block content %}
+
+<section>
+  <h2>Start a simulated purchase</h2>
+  <p class="desc">Pick any real product from any store in the system and give it a customer name to walk through the 4-step buyer experience: request → payment method → checkout → invoice.</p>
+  <form method="post" action="{{ url_for('customer_demo_start') }}" class="card" style="max-width:480px;">
+    <label>Customer name</label>
+    <input type="text" name="customer_name" required placeholder="e.g. Jordan Lee">
+    <label>Customer email (optional)</label>
+    <input type="text" name="customer_email" placeholder="jordan@example.com">
+    <label>Product</label>
+    <select name="product_id" required style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;">
+      {% for p in products %}
+      <option value="{{ p['id'] }}">{{ p['title'] }} — ${{ "%.2f"|format(p['price_cents']/100) }} ({{ p['store_name'] }}){{ '' if p['available'] else ' — not available' }}</option>
+      {% else %}
+      <option disabled>No products yet — add one from a vendor dashboard first</option>
+      {% endfor %}
+    </select>
+    <div style="margin-top:16px;">
+      <button type="submit" {{ 'disabled' if not products else '' }}>Start purchase</button>
+    </div>
+  </form>
+</section>
+
+<section>
+  <h2>Existing simulated customers</h2>
+  <p class="desc">Multiple customers can be mid-flow at once, each at their own stage.</p>
+  <div class="orders-list">
+    {% for o in demo_orders %}
+    <div class="order-card">
+      <div class="head">
+        <div class="head-left">
+          <strong>{{ o['customer_name'] }}</strong>
+          <span style="color:var(--text-muted);font-size:12px;">{{ o['product_title'] }} · {{ o['store_name'] }}</span>
+        </div>
+        <span class="status-pill {{ 'approved' if o['stage'] == 'invoiced' else 'pending_approval' }}">{{ o['stage'] }}</span>
+      </div>
+      <div class="meta">
+        {% if o['stage'] == 'requested' %}
+          <a href="{{ url_for('customer_demo_request', demo_order_id=o['id']) }}">Continue as this customer →</a>
+        {% elif o['stage'] == 'checkout' %}
+          <a href="{{ url_for('customer_demo_checkout', demo_order_id=o['id']) }}">Continue as this customer →</a>
+        {% elif o['stage'] == 'invoiced' %}
+          <a href="{{ url_for('customer_demo_invoice', demo_order_id=o['id']) }}">View invoice →</a>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <p class="empty-note">No simulated customers yet — start one above.</p>
+    {% endfor %}
+  </div>
+</section>
+
+{% endblock %}

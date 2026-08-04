@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Checkout — {{ product['title'] }}</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    min-height: 100vh;
+    background: #fff;
+  }
+
+  .summary {
+    flex: 1;
+    background: #f7f7fa;
+    padding: 60px 50px;
+    display: flex;
+    flex-direction: column;
+  }
+  .summary .merchant { display: flex; align-items: center; gap: 10px; margin-bottom: 48px; }
+  .summary .merchant .logo {
+    width: 32px; height: 32px; border-radius: 7px; background: #635bff;
+    display: flex; align-items: center; justify-content: center; color: white; font-size: 15px;
+  }
+  .summary .merchant span { font-size: 14px; color: #444; font-weight: 600; }
+  .summary .product-name { font-size: 14px; color: #666; margin-bottom: 6px; }
+  .summary .amount { font-size: 36px; font-weight: 600; color: #1a1a1a; margin-bottom: 40px; }
+  .summary .line-items { border-top: 1px solid #e3e3e8; padding-top: 16px; }
+  .summary .line { display: flex; justify-content: space-between; font-size: 13.5px; color: #444; padding: 5px 0; }
+  .summary .line.total { font-weight: 700; border-top: 1px solid #e3e3e8; margin-top: 6px; padding-top: 10px; color: #1a1a1a; }
+
+  .pay-panel { flex: 1.2; padding: 60px 60px; display: flex; align-items: flex-start; justify-content: center; }
+  .pay-inner { width: 100%; max-width: 380px; }
+  .pay-inner h2 { font-size: 18px; margin: 0 0 24px; }
+
+  label { font-size: 12.5px; color: #444; font-weight: 500; display: block; margin: 14px 0 5px; }
+  label:first-of-type { margin-top: 0; }
+  input[type="text"], input[type="email"] {
+    width: 100%; padding: 10px 12px; border: 1px solid #d8d8e0; border-radius: 7px; font-size: 14px;
+    font-family: inherit;
+  }
+  .card-row { display: grid; grid-template-columns: 1fr 90px 70px; gap: 8px; }
+  .billing-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  button.pay-btn {
+    width: 100%; background: #635bff; color: white; border: none;
+    padding: 13px 16px; border-radius: 8px; cursor: pointer; font-size: 14.5px; font-weight: 600;
+    margin-top: 26px;
+  }
+  button.pay-btn:hover { background: #4b42e0; }
+
+  .test-note {
+    font-size: 11.5px; color: #999; text-align: center; margin-top: 14px; line-height: 1.5;
+  }
+
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    .summary, .pay-panel { padding: 32px 24px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="summary">
+    <div class="merchant">
+      <div class="logo">🏪</div>
+      <span>{{ product['store_name'] }}</span>
+    </div>
+    <div class="product-name">{{ product['title'] }}</div>
+    <div class="amount">${{ "%.2f"|format((product['price_cents'] * 1.08)/100) }}</div>
+    <div class="line-items">
+      <div class="line"><span>{{ product['title'] }}</span><span>${{ "%.2f"|format(product['price_cents']/100) }}</span></div>
+      <div class="line"><span>Tax</span><span>${{ "%.2f"|format((product['price_cents']*0.08)/100) }}</span></div>
+      <div class="line total"><span>Total due</span><span>${{ "%.2f"|format((product['price_cents']*1.08)/100) }}</span></div>
+    </div>
+  </div>
+
+  <div class="pay-panel">
+    <div class="pay-inner">
+      <h2>Pay with card</h2>
+      <form method="post">
+        <label>Email</label>
+        <input type="email" name="email" value="{{ demo_order['customer_email'] or '' }}" required>
+
+        <label>Card information</label>
+        <div class="card-row">
+          <input type="text" placeholder="1234 1234 1234 1234" maxlength="19" required>
+          <input type="text" placeholder="MM / YY" maxlength="7" required>
+          <input type="text" placeholder="CVC" maxlength="4" required>
+        </div>
+
+        <label>Name on card</label>
+        <input type="text" name="billing_name" required placeholder="{{ demo_order['customer_name'] }}" value="{{ demo_order['customer_name'] }}">
+
+        <label>Billing address</label>
+        <div class="billing-row">
+          <input type="text" name="billing_address" required placeholder="Street address" style="grid-column: span 2;">
+        </div>
+        <div class="billing-row" style="margin-top:8px;">
+          <input type="text" placeholder="City">
+          <input type="text" placeholder="ZIP / Postal code">
+        </div>
+
+        <button class="pay-btn" type="submit">Pay ${{ "%.2f"|format((product['price_cents']*1.08)/100) }}</button>
+      </form>
+      <p class="test-note">This is a demo checkout — no real card data is collected or transmitted. The payment is processed via Stripe's test mode (or simulated if no test key is configured).</p>
+    </div>
+  </div>
+
+</body>
+</html>
