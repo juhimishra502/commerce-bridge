@@ -1,18 +1,136 @@
-{% extends "base.html" %}
-{% block title %}Log in — Commerce Bridge{% endblock %}
-{% block content %}
-<section>
-  <h2>Log in</h2>
-  <form method="post" class="card">
-    <label>Email</label>
-    <input type="email" name="email" required autofocus>
-    <label>Password</label>
-    <input type="password" name="password" required>
-    {% if error %}<div class="error">{{ error }}</div>{% endif %}
-    <div style="margin-top:16px;">
-      <button type="submit">Log in</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Log in — Commerce Bridge</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .hero {
+    flex: 1.1;
+    background: radial-gradient(circle at 20% 20%, #7a72ff 0%, #4b42e0 45%, #201a6b 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    width: 500px; height: 500px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    top: -150px; right: -150px;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    bottom: -100px; left: -80px;
+  }
+  .hero-inner { position: relative; z-index: 1; max-width: 460px; }
+  .hero .logo {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 28px;
+  }
+  .hero h1 {
+    font-size: 34px; line-height: 1.15; margin: 0 0 14px;
+    letter-spacing: -0.5px;
+  }
+  .hero p.tagline {
+    font-size: 16px; color: rgba(255,255,255,0.82); line-height: 1.6; margin: 0 0 32px;
+  }
+  .hero .features { display: flex; flex-direction: column; gap: 14px; }
+  .hero .feature { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: rgba(255,255,255,0.9); }
+  .hero .feature .dot {
+    width: 26px; height: 26px; border-radius: 7px; background: rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+  }
+  .hero .badge {
+    display: inline-block; font-size: 11.5px; color: rgba(255,255,255,0.85);
+    border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 4px 12px;
+    margin-bottom: 20px;
+  }
+
+  .panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    background: #fff;
+  }
+  .panel-inner { width: 100%; max-width: 340px; }
+  .panel h2 { font-size: 20px; margin: 0 0 6px; color: #1a1a1a; }
+  .panel p.sub { font-size: 13.5px; color: #666; margin: 0 0 28px; }
+
+  label { font-size: 13px; color: #666; display: block; margin: 16px 0 4px; }
+  label:first-of-type { margin-top: 0; }
+  input[type="email"], input[type="password"] {
+    width: 100%; padding: 10px 12px; border: 1px solid #e3e3e8; border-radius: 8px; font-size: 14px;
+    font-family: inherit;
+  }
+  button {
+    width: 100%; background: #635bff; color: white; border: none;
+    padding: 12px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;
+    margin-top: 22px;
+  }
+  button:hover { background: #4b42e0; }
+  .error { color: #b00020; font-size: 13px; margin-top: 10px; }
+  .helper-link { font-size: 13px; color: #666; margin-top: 20px; text-align: center; }
+  .helper-link a { color: #635bff; text-decoration: none; font-weight: 600; }
+
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    .hero { padding: 40px 28px; }
+    .hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="logo">🏪</div>
+      <div class="badge">Vendor Gateway</div>
+      <h1>One Gateway.<br>Every Agent.</h1>
+      <p class="tagline">Connect your store once — sell through ChatGPT, Gemini, and whatever agent comes next, without integrating each one yourself.</p>
+      <div class="features">
+        <div class="feature"><span class="dot">🤖</span> ChatGPT Agent Checkout (ACP)</div>
+        <div class="feature"><span class="dot">✨</span> Gemini Agent Checkout (UCP)</div>
+        <div class="feature"><span class="dot">🔒</span> You approve every purchase before it settles</div>
+      </div>
     </div>
-  </form>
-  <p class="helper-link">Don't have an account? <a href="{{ url_for('signup') }}">Sign up</a></p>
-</section>
-{% endblock %}
+  </div>
+
+  <div class="panel">
+    <div class="panel-inner">
+      <h2>Log in</h2>
+      <p class="sub">Access your vendor dashboard</p>
+      <form method="post">
+        <label>Email</label>
+        <input type="email" name="email" required autofocus>
+        <label>Password</label>
+        <input type="password" name="password" required>
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        <button type="submit">Log in</button>
+      </form>
+      <p class="helper-link">Don't have an account? <a href="{{ url_for('signup') }}">Sign up</a></p>
+    </div>
+  </div>
+
+</body>
+</html>
