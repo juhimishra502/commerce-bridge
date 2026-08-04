@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}{{ store['store_name'] }} — Commerce Bridge{% endblock %}
+{% block store_name %}{{ store['store_name'] }}{% endblock %}
+{% block subtitle %}Vendor Portal · {{ vendor['email'] }}{% endblock %}
+{% block nav %}
+  <nav>
+    {% if stores|length > 1 %}
+    <form method="post" action="{{ url_for('switch_store') }}" style="display:inline;">
+      <select name="store_id" onchange="this.form.submit()">
+        {% for s in stores %}
+        <option value="{{ s['id'] }}" {{ 'selected' if s['id'] == store['id'] else '' }}>{{ s['store_name'] }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    {% endif %}
+    <a href="#" onclick="document.getElementById('add-store-panel').style.display='block'; return false;">+ Add store</a>
+    <a href="{{ url_for('logout') }}">Log out</a>
+  </nav>
+{% endblock %}
+
+{% block content %}
+
+<div id="add-store-panel" class="card" style="display:none; margin-bottom:28px;">
+  <form method="post" action="{{ url_for('add_store') }}">
+    <label>New store name</label>
+    <input type="text" name="store_name" required placeholder="e.g. Aurora Outlet">
+    <label class="checkbox-row"><input type="checkbox" name="acp" checked> 🤖 ChatGPT (ACP)</label>
+    <label class="checkbox-row"><input type="checkbox" name="ucp" checked> ✨ Gemini (UCP)</label>
+    <div style="margin-top:16px; display:flex; gap:8px;">
+      <button type="submit">Create store</button>
+      <button type="button" class="secondary" onclick="document.getElementById('add-store-panel').style.display='none';">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<section>
+  <h2>Your Storefront</h2>
+  <p class="desc">Add products and choose which channel(s) each is sold through for <strong>{{ store['store_name'] }}</strong>.</p>
+
+  <form method="post" action="{{ url_for('add_product') }}" class="card" style="margin-bottom:20px;">
+    <label>Product title</label>
+    <input type="text" name="title" required>
+    <label>Description</label>
+    <textarea name="description" rows="2"></textarea>
+    <label>Price (USD)</label>
+    <input type="number" name="price" step="0.01" min="0.01" required>
+    <div style="margin-top:16px;"><button type="submit">Add product</button></div>
+  </form>
+
+  <div class="catalog">
+    {% for p in products %}
+    <div class="catalog-item">
+      <div class="row1">
+        <h3>{{ p['title'] }}</h3>
+        <div class="price">${{ "%.2f"|format(p['price_cents']/100) }}</div>
+      </div>
+      <div class="desc">{{ p['description'] }}</div>
+      <div class="toggles">
+        <form method="post" action="{{ url_for('toggle_product', product_id=p['id']) }}">
+          <input type="hidden" name="field" value="available">
+          <button class="toggle {{ 'on' if p['available'] else 'off-state' }}" type="submit">
+            {{ '✓ Available' if p['available'] else '✕ Not available' }}
+          </button>
+        </form>
+        <form method="post" action="{{ url_for('toggle_product', product_id=p['id']) }}">
+          <input type="hidden" name="field" value="acp_enabled">
+          <button class="toggle {{ 'on' if p['acp_enabled'] else '' }}" type="submit">
+            🤖 ChatGPT {{ 'on' if p['acp_enabled'] else 'off' }}
+          </button>
+        </form>
+        <form method="post" action="{{ url_for('toggle_product', product_id=p['id']) }}">
+          <input type="hidden" name="field" value="ucp_enabled">
+          <button class="toggle {{ 'on' if p['ucp_enabled'] else '' }}" type="submit">
+            ✨ Gemini {{ 'on' if p['ucp_enabled'] else 'off' }}
+          </button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <p class="empty-note">No products yet — add your first one above.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section>
+  <h2>Sales Channels — Test Checkout</h2>
+  <p class="desc">Simulate an agent purchasing this store's available, channel-enabled products.</p>
+  <div class="test-buttons">
+    <button onclick="runFlow('acp')">Test checkout as ChatGPT agent</button>
+    <button onclick="runFlow('ucp')">Test checkout as Gemini agent</button>
+  </div>
+  <div id="test-result"></div>
+</section>
+
+<section>
+  <h2>Orders</h2>
+  <p class="desc">Approve or reject incoming purchase requests. Set shipment estimates once approved.</p>
+  <div class="orders-list">
+    {% for o in orders %}
+    <div class="order-card">
+      <div class="head">
+        <div class="head-left">
+          <strong>{{ o['public_id'] }}</strong>
+          <span style="color:var(--text-muted);font-size:12px;">{{ o['protocol']|upper }}</span>
+        </div>
+        <span class="status-pill {{ o['status'] }}">{{ o['status'].replace('_', ' ') }}</span>
+      </div>
+      <div class="meta">Total: ${{ "%.2f"|format(o['total_cents']/100) }}
+        {% if o['payment_mode'] %} · {{ 'real Stripe test charge' if o['payment_mode'] == 'real_stripe_test' else 'simulated transaction' }}{% endif %}
+      </div>
+
+      {% if o['status'] == 'pending_approval' %}
+      <div class="order-actions">
+        <form method="post" action="{{ url_for('approve_order', order_id=o['id']) }}">
+          <button class="approve" type="submit">Approve</button>
+        </form>
+        <form method="post" action="{{ url_for('reject_order', order_id=o['id']) }}">
+          <button class="reject" type="submit">Reject</button>
+        </form>
+      </div>
+      {% elif o['status'] == 'approved' %}
+      <form method="post" action="{{ url_for('set_shipment', order_id=o['id']) }}" class="shipment-form">
+        <input type="text" name="shipment_estimate" placeholder="e.g. Ships in 3-5 business days" value="{{ o['shipment_estimate'] or '' }}">
+        <button type="submit">Save shipment estimate</button>
+      </form>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="empty-note">No orders yet.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<script>
+const PRODUCTS = {{ products_json|safe }};
+
+async function runFlow(protocol) {
+  const resultEl = document.getElementById('test-result');
+  const field = protocol === 'acp' ? 'acp_enabled' : 'ucp_enabled';
+  const items = PRODUCTS.filter(p => p.available && p[field]).map(p => ({ id: p.id, quantity: 1 }));
+
+  if (items.length === 0) {
+    resultEl.innerHTML = '<span style="color:#b00020;">No available products enabled for this channel.</span>';
+    return;
+  }
+
+  resultEl.textContent = 'Creating checkout session...';
+
+  const createUrl = protocol === 'acp' ? '/acp/checkout_sessions' : '/ucp/checkout-sessions';
+  const createBody = protocol === 'acp'
+    ? { buyer: { name: 'Test Buyer', email: 'buyer@example.com' }, items }
+    : { items };
+
+  try {
+    const createRes = await fetch(createUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(createBody)
+    });
+    const sessionObj = await createRes.json();
+    if (sessionObj.error) {
+      resultEl.innerHTML = '<span style="color:#b00020;">' + sessionObj.error + '</span>';
+      return;
+    }
+
+    const completeRes = await fetch(createUrl + '/' + sessionObj.id + '/complete', { method: 'POST' });
+    const completed = await completeRes.json();
+
+    resultEl.innerHTML = '✔ Order <strong>' + completed.order.id + '</strong> created — status: pending_approval. Refreshing to show it in Orders below...';
+    setTimeout(() => location.reload(), 1200);
+  } catch (e) {
+    resultEl.innerHTML = '<span style="color:#b00020;">Failed — check console</span>';
+    console.error(e);
+  }
+}
+</script>
+{% endblock %}

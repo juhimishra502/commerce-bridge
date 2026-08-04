@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Terms & Conditions — Commerce Bridge{% endblock %}
+{% block content %}
+<section>
+  <h2>Terms &amp; Conditions</h2>
+  <p class="desc">Please review and accept before continuing to set up your store.</p>
+  <div class="card" style="max-width:600px;">
+    <div style="font-size:13px;color:#444;line-height:1.6;max-height:260px;overflow-y:auto;border:1px solid var(--border);padding:12px;border-radius:6px;">
+      <p><strong>Commerce Bridge Vendor Terms (Demo)</strong></p>
+      <p>This is a sandbox/demonstration environment. By using this portal you agree that:</p>
+      <ul>
+        <li>Transactions are test transactions and do not involve real payment unless you explicitly configure live payment credentials.</li>
+        <li>You are responsible for the accuracy of any product listings you create.</li>
+        <li>Orders you approve represent a simulated fulfillment commitment for demonstration purposes only.</li>
+        <li>This platform may be reset or modified at any time, as it is a demonstration project, not a production service.</li>
+      </ul>
+    </div>
+    <form method="post">
+      <label class="checkbox-row">
+        <input type="checkbox" name="agree"> I have read and agree to the terms above
+      </label>
+      {% if error %}<div class="error">{{ error }}</div>{% endif %}
+      <div style="margin-top:16px;">
+        <button type="submit">Continue</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

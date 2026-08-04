@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Set up your store — Commerce Bridge{% endblock %}
+{% block content %}
+<section>
+  <h2>Set up your first store</h2>
+  <p class="desc">Give your store a name and choose which agent checkout channels it sells through by default. You can change this per-product later, and add more stores anytime.</p>
+  <form method="post" class="card">
+    <label>Store name</label>
+    <input type="text" name="store_name" required autofocus placeholder="e.g. Aurora Goods">
+    <label class="checkbox-row">
+      <input type="checkbox" name="acp" checked> 🤖 ChatGPT Agent Checkout (ACP — Stripe + OpenAI)
+    </label>
+    <label class="checkbox-row">
+      <input type="checkbox" name="ucp" checked> ✨ Gemini Agent Checkout (UCP — Google + Shopify)
+    </label>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <div style="margin-top:16px;">
+      <button type="submit">Create store &amp; continue</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
